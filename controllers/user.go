@@ -9,6 +9,7 @@ import (
 
 	"github.com/daviddamicodes/go-user-api/models"
 	"github.com/julienschmidt/httprouter"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -56,20 +57,20 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
 }
 
 func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	u := &models.User{}
+	u := models.User{}
 
-	if err := json.NewDecoder(r.Body).Decode(u); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	u.Id = bson.NewObjectId()
-
+	u.Id = primitive.NewObjectID()
+	
 	_, err := uc.session.InsertOne(context.TODO(), u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
+		return
 	}
 
 	uj, err := json.Marshal(u)
@@ -80,7 +81,8 @@ func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s\n", uj)
+	// fmt.Fprintf(w, "%s\n", uj)
+	w.Write(uj)
 }
 
 func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -88,34 +90,44 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, _ http
 	// findOptions.SetL
 
 	// Here's an array in which you can store the decoded documents
-	var results []*models.User
+	var users []*models.User
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
-	cur, err := uc.session.Find(context.TODO(), bson.D{{}})
+	cursor, err := uc.session.Find(context.TODO(), primitive.D{{}})
 	if err != nil {
-		log.Fatal(err)
-	}
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
 
-	for cur.Next(context.TODO()) {
+	for cursor.Next(context.TODO()) {
 		// Finding multiple documents returns a cursor
 		// Iterating through the cursor allows us to decode documents one at a time
 		var elem models.User
-		err := cur.Decode(&elem)
+		err := cursor.Decode(&elem)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		results = append(results, &elem)
+		users = append(users, &elem)
 	}
 
-	if err := cur.Err(); err != nil {
+	if err := cursor.Err(); err != nil {
 		log.Fatal(err)
 	}
 
-	// Close the cursor once finished
-	cur.Close(context.TODO())
+	userJSON, err := json.Marshal(users)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
+	// Close the cursor once finished
+	cursor.Close(context.TODO())
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(userJSON)
 }
 
 // func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
