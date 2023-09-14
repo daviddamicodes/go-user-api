@@ -11,7 +11,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"gopkg.in/mgo.v2/bson"
 )
 
 type UserController struct {
@@ -25,24 +24,17 @@ func NewUserController(s *mongo.Collection) *UserController{
 func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httprouter.Params ) {
 	id := p.ByName("id")
 
-	// oid := bson.ObjectIdHex(id)
+	// Check if the ID is a valid ObjectId
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid ObjectId", http.StatusBadRequest)
+    return
+	}
 
 	var u = models.User{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&u); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
 
-	 // Check if the ID is a valid ObjectId
-    if !bson.IsObjectIdHex(id) {
-        http.Error(w, "Invalid ObjectId", http.StatusBadRequest)
-        return
-    }
-
-	if err := uc.session.FindOne(context.TODO(), &u); err != nil {
-		w.WriteHeader(404)
+	if err := uc.session.FindOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}}).Decode(&u); err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
@@ -53,7 +45,7 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "%s\n", uj)
+	w.Write(uj)
 }
 
 func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -130,21 +122,20 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, _ http
 	w.Write(userJSON)
 }
 
-// func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-// 	id := p.ByName("id")
+func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
 
-// 	if !bson.IsObjectIdHex(id) {
-// 		w.WriteHeader(404)
-// 		return
-// 	}
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid Object ID", http.StatusBadRequest)
+	}
 
-// 	iod := bson.ObjectIdHex(id)
+	_, err = uc.session.DeleteOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	}
 
-// 	if err := uc.session.DB("go-user-api").C("users").RemoveId(iod); err != nil {
-// 		w.WriteHeader(404)
-// 		return
-// 	}
-
-// 	w.WriteHeader(http.StatusOK)
-// 	fmt.Fprintf(w, "Deleted User %s \n", iod)
-// }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "User with ID %v has been deleted\n", id)
+}
