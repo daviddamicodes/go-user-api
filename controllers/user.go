@@ -122,21 +122,20 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, _ http
 	w.Write(userJSON)
 }
 
-// func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-// 	id := p.ByName("id")
+func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
 
-// 	if !bson.IsObjectIdHex(id) {
-// 		w.WriteHeader(404)
-// 		return
-// 	}
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid Object ID", http.StatusBadRequest)
+	}
 
-// 	iod := bson.ObjectIdHex(id)
+	_, err = uc.session.DeleteOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	}
 
-// 	if err := uc.session.DB("go-user-api").C("users").RemoveId(iod); err != nil {
-// 		w.WriteHeader(404)
-// 		return
-// 	}
-
-// 	w.WriteHeader(http.StatusOK)
-// 	fmt.Fprintf(w, "Deleted User %s \n", iod)
-// }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "User with ID %v has been deleted\n", id)
+}

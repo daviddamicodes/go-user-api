@@ -23,7 +23,7 @@ func main() {
 	router.GET("/user/:id", session.GetUser)
 	router.GET("/user", session.GetUsers)
 	router.POST("/user", session.CreateUser)
-	// router.DELETE("/user/:id", session.DeleteUser)
+	router.DELETE("/user/:id", session.DeleteUser)
 	http.ListenAndServe("localhost:8080", router)
 }
 
