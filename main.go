@@ -48,7 +48,7 @@ func getUserCollection() *mongo.Collection {
 		panic(err)
 	}
 
-	userCollection := client.Database("go-user-api").Collection("users")
+	userCollection := client.Database(os.Getenv("DB_COLLECTION")).Collection("users")
 
 	return userCollection
 }
