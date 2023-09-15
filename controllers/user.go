@@ -122,6 +122,53 @@ func (uc UserController) GetUsers(w http.ResponseWriter, r *http.Request, _ http
 	w.Write(userJSON)
 }
 
+func (uc UserController) UpdateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid Object ID", http.StatusBadRequest)
+	}
+
+	var u map[string]interface{}
+
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	update := primitive.D{}
+
+	if age, ok := u["age"].(float64); ok {
+		update = append(update, primitive.E{Key: "$set", Value: primitive.D{{Key:"age", Value: age}}})
+	}
+	if name, ok := u["name"].(string); ok {
+		update = append(update, primitive.E{Key: "$set", Value: primitive.D{{Key: "name", Value: name}}})
+	}
+	if gender, ok := u["gender"].(string); ok {
+		update = append(update, primitive.E{Key: "$set", Value: primitive.D{{Key: "gender", Value: gender}}})
+	}
+
+	// Check if there are any fields to update
+	if len(update) == 0 {
+		http.Error(w, "No fields to update", http.StatusBadRequest)
+		return
+	}
+
+  // Update the user in the database
+  filter := primitive.D{{Key: "_id", Value: oid}} // Filter by the user's ObjectId
+
+	_, err = uc.session.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "User updated successfully")
+}
+
 func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id := p.ByName("id")
 

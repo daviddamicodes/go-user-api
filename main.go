@@ -23,6 +23,7 @@ func main() {
 	router.GET("/user/:id", session.GetUser)
 	router.GET("/user", session.GetUsers)
 	router.POST("/user", session.CreateUser)
+	router.PATCH("/user/:id", session.UpdateUser)
 	router.DELETE("/user/:id", session.DeleteUser)
 	http.ListenAndServe("localhost:8080", router)
 }
@@ -39,6 +40,8 @@ func getUserCollection() *mongo.Collection {
   client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		panic(err)
+	} else {
+		log.Print("Db connected successfully")
 	}
 
 	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
