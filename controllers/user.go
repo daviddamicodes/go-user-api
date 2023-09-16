@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/absagar/go-bcrypt"
 	"github.com/daviddamicodes/go-user-api/models"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -58,6 +59,28 @@ func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 	defer r.Body.Close()
 
 	u.Id = primitive.NewObjectID()
+
+	var existingUser models.User
+
+	if err := uc.session.FindOne(context.TODO(), primitive.D{{Key: "username", Value: u.Username}}).Decode(&existingUser); err == nil {
+		http.Error(w, "User with this username already exists", http.StatusInternalServerError)
+		return
+	} else if err != mongo.ErrNoDocuments {
+		// Handle unexpected errors when querying the database
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	salt, _ := bcrypt.Salt(10)
+	hashedPassword, _ := bcrypt.Hash(u.Password, salt)
+
+	// if bcrypt.Match(u.Password, hash) {
+	// 	fmt.Println("Passwords Match")
+	// } else {
+	// 	fmt.Println("Passwords dont Match")
+	// }
+
+	u.Password = hashedPassword
 	
 	_, err := uc.session.InsertOne(context.TODO(), u)
 	if err != nil {
