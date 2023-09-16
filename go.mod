@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
+	github.com/absagar/go-bcrypt v0.0.0-20171215093918-4b100ddf46d7 // indirect
 	github.com/bep/godartsass v1.2.0 // indirect
 	github.com/bep/godartsass/v2 v2.0.0 // indirect
 	github.com/bep/golibsass v1.1.1 // indirect
