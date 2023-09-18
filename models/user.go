@@ -11,5 +11,5 @@ type User struct {
 	Email				string							`json:"email" bson:"email"`
 	Gender			string							`json:"gender" bson:"gender"`
 	Age					int									`json:"age" bson:"age"`
-	Password		string							`json:"password" bson:"password"`
+	Password		string							`json:"-" bson:"password"`
 }
