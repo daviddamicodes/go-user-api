@@ -19,20 +19,21 @@ import (
 
 func main() {
 	router := httprouter.New()
-	session := controllers.NewUserController(getUserCollection())
-	router.GET("/user/:id", session.GetUser)
-	router.GET("/user", session.GetUsers)
-	router.POST("/user", session.CreateUser)
-	router.PATCH("/user/:id", session.UpdateUser)
-	router.DELETE("/user/:id", session.DeleteUser)
+	// user session
+	us := controllers.NewUserController(getUserCollection())
+	router.GET("/user/:id", us.GetUser)
+	router.GET("/user", us.GetUsers)
+	router.POST("/user", us.CreateUser)
+	router.PATCH("/user/:id", us.UpdateUser)
+	router.DELETE("/user/:id", us.DeleteUser)
+	router.GET("/auth/login", us.Login)
 	http.ListenAndServe("localhost:8080", router)
 }
 
 func getUserCollection() *mongo.Collection {
-	_err := godotenv.Load(".env")
-
-	if _err != nil {
-		log.Fatal(_err)
+	
+	if err := godotenv.Load(".env"); err != nil {
+		log.Fatal(err)
 	}
 
 	uri := os.Getenv("MONGODB_URI")
