@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/daviddamicodes/go-user-api/controllers"
+	"github.com/daviddamicodes/go-user-api/middleware"
 
 	"context"
 
@@ -22,7 +23,7 @@ func main() {
 	// user session
 	us := controllers.NewUserController(getUserCollection())
 	router.GET("/user/:id", us.GetUser)
-	router.GET("/user", us.GetUsers)
+	router.GET("/user", middleware.AuthMiddleware(us.GetUsers))
 	router.POST("/user", us.CreateUser)
 	router.PATCH("/user/:id", us.UpdateUser)
 	router.DELETE("/user/:id", us.DeleteUser)
