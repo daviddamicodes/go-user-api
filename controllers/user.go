@@ -32,7 +32,7 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
     return
 	}
 
-	var u = models.User{}
+	var u models.User
 
 	if err := uc.session.FindOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}}).Decode(&u); err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
