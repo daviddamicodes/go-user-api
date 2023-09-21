@@ -2,15 +2,18 @@ package controllers
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/absagar/go-bcrypt"
 	"github.com/daviddamicodes/go-user-api/models"
+	redisClient "github.com/daviddamicodes/go-user-api/redisclient"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
@@ -78,4 +81,98 @@ func (uc UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	w.Write(uj)
+}
+
+func (uc UserController) RequestPasswordReset(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid UserID", http.StatusBadRequest)
+		return
+	}
+
+	var u models.User
+
+	if err := uc.session.FindOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}}).Decode(&u); err != nil {
+		http.Error(w, "User does not exist", http.StatusNotFound)
+		return
+	}
+
+	key := fmt.Sprintf("reset_code_%v", u.Email)
+
+	// Define the minimum and maximum values for a 4-digit integer
+	minValue := big.NewInt(1000) // 4-digit minimum
+	maxValue := big.NewInt(9999) // 4-digit maximum
+
+	// Calculate the range (maxValue - minValue)
+	rangeValue := new(big.Int).Sub(maxValue, minValue)
+
+	// Generate a random value within the specified range
+	randomValue, err := randRange(minValue, rangeValue)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Add minValue to the random value to get a 4-digit random integer
+	randomValue.Add(randomValue, minValue)
+
+	// Convert the random big.Int to a string with leading zeros if necessary
+	randomString := fmt.Sprintf("%04s", randomValue.String())
+
+	fmt.Printf("CODE IS %v\n", randomString)
+
+	redisCache, err := redisClient.RedisClient()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+		
+	err = redisCache.Set(context.Background(), key, randomString, time.Second*60*60).Err()
+	if err != nil {
+		panic(err)
+	}
+	
+	w.WriteHeader(201)
+	fmt.Fprintf(w, "Reset Request Sent\n")
+}
+
+func randRange(min, rangeValue *big.Int) (*big.Int, error) {
+	randomValue, err := rand.Int(rand.Reader, rangeValue)
+	if err != nil {
+		return nil, err
+	}
+	return randomValue, nil
+}
+
+func (uc UserController) ResetPassword(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, "Invalid ObjectID", http.StatusBadRequest)
+		return
+	}
+
+	var u models.User
+
+	if err := uc.session.FindOne(context.TODO(), primitive.D{{Key: "_id", Value: oid}}).Decode(&u); err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	key := fmt.Sprintf("reset_code_%v", u.Email)
+
+	redisCache, err := redisClient.RedisClient()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	val, err := redisCache.Get(context.Background(), key).Result()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("RETRIEVED CODE IS %v \n", val)
 }

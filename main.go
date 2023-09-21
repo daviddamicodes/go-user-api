@@ -22,12 +22,16 @@ func main() {
 	router := httprouter.New()
 	// user session
 	us := controllers.NewUserController(getUserCollection())
+	//USERS
 	router.GET("/user/:id", us.GetUser)
 	router.GET("/user", middleware.AuthMiddleware(us.GetUsers))
 	router.POST("/user", us.CreateUser)
 	router.PATCH("/user/:id", us.UpdateUser)
 	router.DELETE("/user/:id", us.DeleteUser)
+	//AUTH
 	router.GET("/auth/login", us.Login)
+	router.GET("/auth/request-reset/:id", us.RequestPasswordReset)
+	router.GET("/auth/reset/:id", us.ResetPassword)
 	http.ListenAndServe("localhost:8080", router)
 }
 
