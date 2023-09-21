@@ -79,7 +79,7 @@ func extractTokenFromRequest(r *http.Request) string {
     // Extract the token from the Authorization header (Bearer token).
     authHeader := r.Header.Get("Authorization")
     if strings.HasPrefix(authHeader, "Bearer ") {
-        return strings.TrimPrefix(authHeader, "Bearer ")
+      return strings.TrimPrefix(authHeader, "Bearer ")
     }
 
     // If not found in the header, check the query parameter.

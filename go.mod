@@ -2,17 +2,22 @@ module github.com/daviddamicodes/go-user-api
 
 go 1.21.0
 
+require github.com/redis/go-redis/v9 v9.2.0
+
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/absagar/go-bcrypt v0.0.0-20171215093918-4b100ddf46d7 // indirect
 	github.com/bep/godartsass v1.2.0 // indirect
 	github.com/bep/godartsass/v2 v2.0.0 // indirect
 	github.com/bep/golibsass v1.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cosmtrek/air v1.45.0 // indirect
 	github.com/creack/pty v1.1.18 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/gohugoio/hugo v0.118.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
@@ -24,6 +29,7 @@ require (
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/redis/go-redis v6.15.9+incompatible // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/tdewolff/parse/v2 v2.6.8 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
