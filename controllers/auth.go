@@ -99,7 +99,7 @@ func (uc UserController) RequestPasswordReset(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	key := fmt.Sprintf("reset_code_%v", u.Email)
+	key := fmt.Sprintf("reset_code_%v", u.Username)
 
 	// Define the minimum and maximum values for a 4-digit integer
 	minValue := big.NewInt(1000) // 4-digit minimum
@@ -162,7 +162,7 @@ func (uc UserController) ResetPassword(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	key := fmt.Sprintf("reset_code_%v", u.Email)
+	key := fmt.Sprintf("reset_code_%v", u.Username)
 
 	redisCache, err := redisClient.RedisClient()
 	if err != nil {
@@ -171,8 +171,51 @@ func (uc UserController) ResetPassword(w http.ResponseWriter, r *http.Request, p
 
 	val, err := redisCache.Get(context.Background(), key).Result()
 	if err != nil {
-		panic(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	fmt.Printf("RETRIEVED CODE IS %v \n", val)
+	// fmt.Printf("RETRIEVED CODE IS %v \n", val)
+	
+	type RequestStruct struct {
+		Password string `json:"password" bson:"password"`
+		Code string `json:"code" bson:"code"`
+	}
+
+	var eu RequestStruct
+	
+	if err := json.NewDecoder(r.Body).Decode(&eu); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	
+	if eu.Code != val {
+		http.Error(w, "Incorrect Code", http.StatusBadRequest)
+		return
+	}
+
+	salt, _ := bcrypt.Salt(10)
+	hashedPassword, err := bcrypt.Hash(eu.Password, salt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	updateResult := uc.session.FindOneAndUpdate(context.TODO(), primitive.D{{Key: "_id", Value: oid}}, primitive.D{{Key: "$set", Value: primitive.D{{Key: "password", Value: hashedPassword}}}})
+
+	if updateResult.Err() != nil {
+		http.Error(w, updateResult.Err().Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]string{"message": "Password reset successful"}
+	uj, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	w.Write(uj)
 }
